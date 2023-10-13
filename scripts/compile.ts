@@ -1,10 +1,11 @@
 import { promises as filesystem } from 'fs'
 import * as path from 'path'
 import { CompilerOutput, CompilerInput, compileStandardWrapper, CompilerOutputContract } from 'solc'
-import { rlpEncode } from '@zoltu/rlp-encoder'
-import { keccak256 } from 'js-sha3'
-import { ec as EllipticCurve } from 'elliptic'
-const secp256k1 = new EllipticCurve('secp256k1')
+// import { rlpEncode } from '@zoltu/rlp-encoder'
+// import { keccak256 } from 'js-sha3'
+// import { ec as EllipticCurve } from 'elliptic'
+import SkalePowMiner  from "@skaleproject/pow";
+// const secp256k1 = new EllipticCurve('secp256k1')
 
 export async function ensureDirectoryExists(absoluteDirectoryPath: string) {
 	try {
@@ -76,32 +77,44 @@ async function writeFactoryDeployerTransaction(contract: CompilerOutputContract)
 	const deploymentGas = 100000 // actual gas costs last measure: 59159; we don't want to run too close though because gas costs can change in forks and we want our address to be retained
 	const deploymentBytecode = contract.evm.bytecode.object
 
-	const nonce = new Uint8Array(0)
-	const gasPrice = arrayFromNumber(100*10**9)
-	const gasLimit = arrayFromNumber(deploymentGas)
-	const to = new Uint8Array(0)
-	const value = new Uint8Array(0)
-	const data = arrayFromHexString(deploymentBytecode)
-	const v = arrayFromNumber(27)
-	const r = arrayFromHexString('2222222222222222222222222222222222222222222222222222222222222222')
-	const s = arrayFromHexString('2222222222222222222222222222222222222222222222222222222222222222')
+	console.log(deploymentBytecode);
 
-	const unsignedEncodedTransaction = rlpEncode([nonce, gasPrice, gasLimit, to, value, data])
-	const signedEncodedTransaction = rlpEncode([nonce, gasPrice, gasLimit, to, value, data, v, r, s])
-	const hashedSignedEncodedTransaction = new Uint8Array(keccak256.arrayBuffer(unsignedEncodedTransaction))
-	const signerAddress = arrayFromHexString(keccak256(secp256k1.recoverPubKey(hashedSignedEncodedTransaction, { r: r, s: s}, 0).encode('array').slice(1)).slice(-40))
-	const contractAddress = arrayFromHexString(keccak256(rlpEncode([signerAddress, nonce])).slice(-40))
+	const deployerAddress = "0xA32F5E0d5CB44809621a8B6F3C4A4e82A1B010F0";
+	const miner = new SkalePowMiner();
+	console.log("Calculating");
+	const gasPrice = await miner.mineFreeGas(deploymentGas, deployerAddress, 0, deploymentBytecode);
 
-	const filePath = path.join(__dirname, '../output/deployment.json')
-	const fileContents = `{
-	"gasPrice": 100000000000,
-	"gasLimit": ${deploymentGas},
-	"signerAddress": "${signerAddress.reduce((x,y)=>x+=y.toString(16).padStart(2, '0'), '')}",
-	"transaction": "${signedEncodedTransaction.reduce((x,y)=>x+=y.toString(16).padStart(2, '0'), '')}",
-	"address": "${contractAddress.reduce((x,y)=>x+=y.toString(16).padStart(2, '0'), '')}"
-}
-`
-	await filesystem.writeFile(filePath, fileContents, { encoding: 'utf8', flag: 'w' })
+	console.log(gasPrice);
+
+	// const nonce = new Uint8Array(0)
+	// const gasPrice = arrayFromNumber(1000000)
+	// const gasLimit = arrayFromNumber(deploymentGas)
+	// const to = new Uint8Array(0)
+	// const value = new Uint8Array(0)
+	// const data = arrayFromHexString(deploymentBytecode)
+	// const v = arrayFromNumber(27)
+	// const r = arrayFromHexString('2222222222222222222222222222222222222222222222222222222222222222')
+	// const s = arrayFromHexString('2222222222222222222222222222222222222222222222222222222222222222')
+
+	// const unsignedEncodedTransaction = rlpEncode([nonce, gasPrice, gasLimit, to, value, data])
+	// const signedEncodedTransaction = rlpEncode([nonce, gasPrice, gasLimit, to, value, data, v, r, s])
+	// const hashedSignedEncodedTransaction = new Uint8Array(keccak256.arrayBuffer(unsignedEncodedTransaction))
+	// const address = keccak256(secp256k1.recoverPubKey(hashedSignedEncodedTransaction, { r: r, s: s}, 0).encode('array').slice(1)).slice(-40)
+	// const signerAddress = arrayFromHexString(address)
+	// const contractAddress = arrayFromHexString(keccak256(rlpEncode([signerAddress, nonce])).slice(-40))
+
+	// console.log(address);
+
+	// const filePath = path.join(__dirname, '../output/deployment.json')
+	// const fileContents = `{
+	// "gasPrice": 100000000000,
+	// "gasLimit": ${deploymentGas},
+	// "signerAddress": "${signerAddress.reduce((x,y)=>x+=y.toString(16).padStart(2, '0'), '')}",
+	// "transaction": "${signedEncodedTransaction.reduce((x,y)=>x+=y.toString(16).padStart(2, '0'), '')}",
+	// "address": "${contractAddress.reduce((x,y)=>x+=y.toString(16).padStart(2, '0'), '')}"
+    // }
+
+	// await filesystem.writeFile(filePath, fileContents, { encoding: 'utf8', flag: 'w' })
 }
 
 doStuff().then(() => {
@@ -111,15 +124,15 @@ doStuff().then(() => {
 	process.exit(1)
 })
 
-function arrayFromNumber(value: number): Uint8Array {
-	return arrayFromHexString(value.toString(16))
-}
+// function arrayFromNumber(value: number): Uint8Array {
+// 	return arrayFromHexString(value.toString(16))
+// }
 
-function arrayFromHexString(value: string): Uint8Array {
-	const normalized = (value.length % 2) ? `0${value}` : value
-	const bytes = []
-	for (let i = 0; i < normalized.length; i += 2) {
-		bytes.push(Number.parseInt(`${normalized[i]}${normalized[i+1]}`, 16))
-	}
-	return new Uint8Array(bytes)
-}
+// function arrayFromHexString(value: string): Uint8Array {
+// 	const normalized = (value.length % 2) ? `0${value}` : value
+// 	const bytes = []
+// 	for (let i = 0; i < normalized.length; i += 2) {
+// 		bytes.push(Number.parseInt(`${normalized[i]}${normalized[i+1]}`, 16))
+// 	}
+// 	return new Uint8Array(bytes)
+// }
