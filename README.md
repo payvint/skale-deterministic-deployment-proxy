@@ -1,9 +1,5 @@
-## TODO: UPDATE
-
-# Right now possible to deploy via Remix
-
-# Deterministic Deployment Proxy
-This is a proxy contract that can be deployed to any SKALE chain at the same address, and can then in turn deploy any contract at a deterministic location using CREATE2.  To use, first deploy the contract using the Steps below, then submit a transaction `to` the address specified in `0x647a4a371397dfca08829ef628641d7330bb0f07` (or grab last known good from bottom of readme). The data should be the 32 byte 'salt' followed by your init code.
+# SKALE Deterministic Deployment Proxy
+This is a proxy contract that can be deployed to any SKALE chain at the same address, and can then in turn deploy any contract by whitelisted(in ConfigController) deployers at a deterministic location using CREATE2.  To use, first deploy the contract using the "Steps" below, then submit a transaction `to` the address specified in `0x647a4a371397dfca08829ef628641d7330bb0f07` (or grab last known good from bottom of readme). The data should be the 32 byte 'salt' followed by your init code.
 
 ## Steps
 1. Whitelist deployer address (`0xc61b4ff243a7556729a0f081b4389adf19bfe74b`) a DEPLOYER_ROLE on SKALE chain
